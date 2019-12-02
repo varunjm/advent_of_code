@@ -1,10 +1,12 @@
+import sys
+
 def fuel_weight(fuel):
 	if fuel < 7:
 		return fuel 
 	additional = fuel_weight(fuel/3-2)
 	return fuel + additional
 
-f = open("./input/1.in", "r")
+f = open(sys.argv[1], "r")
 weights = f.readlines()
 fuel=0
 

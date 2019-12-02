@@ -1,4 +1,6 @@
-f = open("./input/1.in", "r")
+import sys
+
+f = open(sys.argv[1], "r")
 
 weights = f.readlines()
 fuel=0
