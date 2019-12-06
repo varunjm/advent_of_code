@@ -1,0 +1,5 @@
+p=$1
+i=$2
+echo python "$p".py input/"$i".in
+python -m cProfile "$p".py input/"$i".in $3
+
