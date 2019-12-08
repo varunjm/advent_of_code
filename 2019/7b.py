@@ -17,7 +17,6 @@ class IntcodeComputer:
   
   def set_phase(self, ph):
     self.phase = ph
-    print(ph)
 
   def set_signal(self, input):
     self.signal = input
@@ -41,10 +40,8 @@ class IntcodeComputer:
 
   def exec_next_instr(self):
     opcode = self.instrs[self.PC]%100
-    # print opcode, 
     if opcode in self.four_op_instr_codes:
       param1, param2 = self.fetch_2_params()
-      # print param1, param2
       if opcode == 1:
         self.instrs[self.instrs[self.PC+3]] = param1 + param2
       elif opcode == 2:
@@ -56,35 +53,33 @@ class IntcodeComputer:
       self.PC += 4
     elif opcode == 3:
       if self.phase != None:
-        # print 'reading', self.phase
         self.instrs[self.instrs[self.PC+1]] = self.phase
         self.phase = None
       else :
-        # print 'reading', self.signal
         self.instrs[self.instrs[self.PC+1]] = self.signal
       self.PC += 2
     elif opcode == 4:
       return_value = self.fetch_1_param()
-      # print 'writing', return_value
       self.PC += 2
-      return return_value
+      return (opcode, return_value)
     elif opcode in self.two_op_instr_codes:
       param1, param2 = self.fetch_2_params()
-      # print param1, param2
       if (param1 != 0 and opcode == 5) or (param1 == 0 and opcode == 6) :
         self.PC = param2
       else:
         self.PC += 3
     elif opcode == 99:
-      return None
+      return (opcode, None)
     else:
       print ("ERROR")
       sys.exit()
-  
+    return (opcode, None)
+
   def run(self):
     result = None
-    while not result:
-      result = self.exec_next_instr()
+    opcode = -1
+    while not result and opcode != 99:
+      opcode, result = self.exec_next_instr()
     return result
 
 program = [int(element) for element in f.readline().split(",")]
@@ -94,23 +89,23 @@ max_thrust_phases = None
 for phases in itertools.permutations([5,6,7,8,9]):
   Amplifier = [IntcodeComputer(program[:]) for c in range(0,5)]
   Amplifier[0].set_signal(0)
-  for idx, phase in enumerate([9,8,7,6,5]):
-  # for idx, phase in enumerate(phases):
+  for idx, phase in enumerate(phases):
     Amplifier[idx].set_phase(phase)
 
   idx = 0
   output_signal = 0
-  while output_signal != None:
+  thrust = 0
+  while True:
     Amplifier[idx].set_signal(output_signal)
     output_signal = Amplifier[idx].run()
-    print(output_signal)
-    # Amplifier[idx].print_computer()
-    # print(output_signal)
+    if output_signal == None:
+      break
+    thrust = output_signal
     idx = (idx + 1) % 5
 
-  if max_thrust < output_signal:
-    max_thrust = output_signal
+  if max_thrust < thrust:
+    max_thrust = thrust
     max_thrust_phases = phases
-  break
-# print(max_thrust_phases)
+
+print(max_thrust_phases)
 print(max_thrust)
