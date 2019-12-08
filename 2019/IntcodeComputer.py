@@ -70,3 +70,9 @@ class IntcodeComputer:
     while not result and opcode != 99:
       opcode, result = self.exec_next_instr()
     return result
+
+  def print_program(self):
+    print (self.instrs)
+  
+  def fetch_mem(self, loc):
+    return self.instrs[loc]
