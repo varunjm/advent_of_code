@@ -3,64 +3,98 @@ import itertools
 
 f = open(sys.argv[1], "r")
 
-program = [int(element) for element in f.readline().split(",")]
-thrust_map = dict()
+class IntcodeComputer:
+  four_op_instr_codes = [1, 2, 7 ,8]
+  two_op_instr_codes = [5, 6]
 
-def RunAmplifier (array, phase, input):
-  if (phase, input) in thrust_map:
-    return thrust_map[(phase, input)]
-  index = 0
-  return_value = None
-  while array[index]%100 != 99:
-    opcode = array[index]%100
-    param_mode = str(array[index]/100)[::-1].ljust(2, '0')
-    if opcode == 1 or opcode == 2 or opcode == 7 or opcode == 8:
-      param1 = array[index+1] if param_mode[0] == '1' else array[array[index+1]]
-      param2 = array[index+2] if param_mode[1] == '1' else array[array[index+2]]
+  def __init__(self, instrs):
+    #list of instructions
+    self.instrs = instrs
+    #program counter
+    self.PC = 0
+    self.phase = None
+    self.signal = None
+  
+  def set_phase(self, ph):
+    self.phase = ph
+
+  def set_signal(self, input):
+    self.signal = input
+
+  def print_computer (self):
+    print ('instr', self.instrs)
+    print ('PC', self.PC)
+    print ('Signal', self.signal)
+    print ('Phase', self.phase)
+
+  def fetch_2_params(self):
+    param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(2, '0')
+    param1 = self.instrs[self.PC+1] if param_mode[0] == '1' else self.instrs[self.instrs[self.PC+1]]
+    param2 = self.instrs[self.PC+2] if param_mode[1] == '1' else self.instrs[self.instrs[self.PC+2]]
+    return param1, param2
+
+  def fetch_1_param(self):
+    param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(2, '0')
+    param1 = self.instrs[self.PC+1] if param_mode[0] == '1' else self.instrs[self.instrs[self.PC+1]]
+    return param1
+
+  def exec_next_instr(self):
+    opcode = self.instrs[self.PC]%100
+    if opcode in self.four_op_instr_codes:
+      param1, param2 = self.fetch_2_params()
       if opcode == 1:
-        array[array[index+3]] = param1 + param2
+        self.instrs[self.instrs[self.PC+3]] = param1 + param2
       elif opcode == 2:
-        array[array[index+3]] = param1 * param2
+        self.instrs[self.instrs[self.PC+3]] = param1 * param2
       elif opcode == 7:
-        array[array[index+3]] = 1 if param1 < param2 else 0
+        self.instrs[self.instrs[self.PC+3]] = 1 if param1 < param2 else 0
       elif opcode == 8:
-        array[array[index+3]] = 1 if param1 == param2 else 0
-      index += 4
+        self.instrs[self.instrs[self.PC+3]] = 1 if param1 == param2 else 0
+      self.PC += 4
     elif opcode == 3:
-      if phase != None:
-        array[array[index+1]] = phase
-        phase = None
+      if self.phase != None:
+        self.instrs[self.instrs[self.PC+1]] = self.phase
+        self.phase = None
       else :
-        array[array[index+1]] = input
-      index += 2
+        self.instrs[self.instrs[self.PC+1]] = self.signal
+      self.PC += 2
     elif opcode == 4:
-      param1 = array[index+1] if param_mode[0] == '1' else array[array[index+1]]
-      return_value = param1
-      index += 2
-    elif opcode == 5 or opcode == 6:
-      param1 = array[index+1] if param_mode[0] == '1' else array[array[index+1]]
-      param2 = array[index+2] if param_mode[1] == '1' else array[array[index+2]]
+      return_value = self.fetch_1_param()
+      self.PC += 2
+      return return_value
+    elif opcode in self.two_op_instr_codes:
+      param1, param2 = self.fetch_2_params()
       if (param1 != 0 and opcode == 5) or (param1 == 0 and opcode == 6) :
-        index = param2
+        self.PC = param2
       else:
-        index += 3
+        self.PC += 3
+    elif opcode == 99:
+      return True
     else:
       print ("ERROR")
       sys.exit()
-  thrust_map[(phase, input)] = return_value
-  return return_value
+    return False
+  
+  def run(self):
+    result = None
+    while not result:
+      result = self.exec_next_instr()
+    return result
+
+program = [int(element) for element in f.readline().split(",")]
 
 max_thrust = -1
 max_thrust_phases = None
 for phases in itertools.permutations([0,1,2,3,4]):
+  Amplifier = [IntcodeComputer(program[:]) for c in range(0,5)]
   output_signal = 0
-  for phase in phases:
-    output_signal = RunAmplifier (program[:], phase, output_signal)
+  for idx, phase in enumerate(phases):
+    Amplifier[idx].set_signal(output_signal)
+    Amplifier[idx].set_phase(phase)
+    output_signal = Amplifier[idx].run()
   if max_thrust < output_signal:
     max_thrust = output_signal
     max_thrust_phases = phases
 
 print(max_thrust_phases)
 print(max_thrust)
-
-
