@@ -8,13 +8,18 @@ class IntcodeComputer:
     6: lambda p1, p2, pc: p2 if p1 == 0 else pc + 3,
     7: lambda p1, p2: 1 if p1 < p2 else 0,
     8: lambda p1, p2: 1 if p1 == p2 else 0,
+    9: lambda p1, rel_base: p1 + rel_base,
   }
 
-  def __init__(self, instrs):
+  def __init__(self, instrs, stop_at_print = True, DEBUG = False):
     self.instrs = instrs
+    self.instrs.extend([0 for i in range(0, 5000)])
     self.PC = 0
     self.phase = None
     self.signal = 0
+    self.relative_base = 0
+    self.stop_at_print = stop_at_print
+    self.DEBUG_MODE = DEBUG
   
   def set_phase(self, ph):
     self.phase = ph
@@ -22,42 +27,77 @@ class IntcodeComputer:
   def set_signal(self, input):
     self.signal = input
 
+  def param_value(self, param_mode, offset):
+    if param_mode == '1':
+      param = self.instrs[self.PC+offset]
+    elif param_mode == '2':
+      param = self.instrs[self.relative_base + self.instrs[self.PC+offset]]
+    else:
+      param = self.instrs[self.instrs[self.PC+offset]]
+    return param
+
   def fetch_1_opnd(self):
-    param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(2, '0')
-    param1 = self.instrs[self.PC+1] if param_mode[0] == '1' else self.instrs[self.instrs[self.PC+1]]
+    param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(3, '0')
+    param1 = self.param_value(param_mode[0], 1)
     return param1
 
   def fetch_2_opnds(self):
-    param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(2, '0')
-    param1 = self.instrs[self.PC+1] if param_mode[0] == '1' else self.instrs[self.instrs[self.PC+1]]
-    param2 = self.instrs[self.PC+2] if param_mode[1] == '1' else self.instrs[self.instrs[self.PC+2]]
+    param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(3, '0')
+    param1 = self.param_value(param_mode[0], 1)
+    param2 = self.param_value(param_mode[1], 2)
     return param1, param2
 
   def fetch_3_opnds(self):
-    param1, param2 = self.fetch_2_opnds()
+    param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(3, '0')
+    param1 = self.param_value(param_mode[0], 1)
+    param2 = self.param_value(param_mode[1], 2)
     dest = self.instrs[self.PC+3]
+    if param_mode[2] == '2':
+      dest += self.relative_base
     return param1, param2, dest
 
   def exec_next_instr(self):
     opcode = self.instrs[self.PC]%100
+    if self.DEBUG_MODE:
+      print (opcode)
     if opcode in self.three_opnds_instr_codes:
       param1, param2, dest = self.fetch_3_opnds()
       self.instrs[dest] = self.operations[opcode](param1, param2)
       self.PC += 4
+      if self.DEBUG_MODE:
+        print (param1, param2)
 
     elif opcode == 3:
-      self.instrs[self.instrs[self.PC+1]] = self.phase if self.phase != None else self.signal
+      param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(2, '0')
+      if param_mode[0] == '0':
+        self.instrs[self.instrs[self.PC+1]] = self.phase if self.phase != None else self.signal
+      elif param_mode[0] == '2':
+        self.instrs[self.relative_base+ self.instrs[self.PC+1]] = self.phase if self.phase != None else self.signal
+      if self.DEBUG_MODE:
+        print ('input', self.instrs[self.instrs[self.PC+1]])
       self.phase = None
       self.PC += 2
 
     elif opcode == 4:
       return_value = self.fetch_1_opnd()
       self.PC += 2
-      return (opcode, return_value)
+      if self.stop_at_print:
+        return (opcode, return_value)
+      else :
+        print (return_value)
 
     elif opcode in self.two_opnds_instr_codes:
       param1, param2 = self.fetch_2_opnds()
       self.PC = self.operations[opcode](param1, param2, self.PC)
+      if self.DEBUG_MODE:
+        print (param1, param2, 'PC = ', self.PC)
+
+    elif opcode == 9:
+      param1 = self.fetch_1_opnd()
+      self.relative_base = self.operations[opcode](param1, self.relative_base)
+      self.PC += 2
+      if self.DEBUG_MODE:
+        print (param1, 'relative_base = ', self.relative_base)
 
     elif opcode == 99:
       return (opcode, None)
