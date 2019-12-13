@@ -1,3 +1,5 @@
+import types
+
 class IntcodeComputer:
   three_opnds_instr_codes = [1, 2, 7 ,8]
   two_opnds_instr_codes = [5, 6]
@@ -11,12 +13,13 @@ class IntcodeComputer:
     9: lambda p1, rel_base: p1 + rel_base,
   }
 
-  def __init__(self, instrs, stop_at_print = True, DEBUG = False):
+  def __init__(self, instrs, stop_at_print = True, input_func = None, DEBUG = False):
     self.instrs = instrs
     self.instrs.extend([0 for i in range(0, 5000)])
     self.PC = 0
     self.phase = None
-    self.signal = 0
+    if input_func != None:
+      self.signal = input_func
     self.relative_base = 0
     self.stop_at_print = stop_at_print
     self.DEBUG_MODE = DEBUG
@@ -69,12 +72,13 @@ class IntcodeComputer:
 
     elif opcode == 3:
       param_mode = str(self.instrs[self.PC]/100)[::-1].ljust(2, '0')
+      input_value = self.signal() if isinstance(self.signal, types.FunctionType) else self.signal
       if param_mode[0] == '0':
-        self.instrs[self.instrs[self.PC+1]] = self.phase if self.phase != None else self.signal
+        self.instrs[self.instrs[self.PC+1]] = self.phase if self.phase != None else input_value
       elif param_mode[0] == '2':
-        self.instrs[self.relative_base+ self.instrs[self.PC+1]] = self.phase if self.phase != None else self.signal
+        self.instrs[self.relative_base+ self.instrs[self.PC+1]] = self.phase if self.phase != None else input_value
       if self.DEBUG_MODE:
-        print ('input', self.instrs[self.instrs[self.PC+1]])
+        print ('input', input_value)
       self.phase = None
       self.PC += 2
 
@@ -107,12 +111,15 @@ class IntcodeComputer:
   def run(self):
     result = None
     opcode = -1
-    while not result and opcode != 99:
+    while result == None and opcode != 99:
       opcode, result = self.exec_next_instr()
     return result
 
   def print_program(self):
     print (self.instrs)
-  
+
   def fetch_mem(self, loc):
     return self.instrs[loc]
+
+  def set_mem(self, loc, value):
+    self.instrs[loc] = value
