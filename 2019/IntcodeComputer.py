@@ -20,6 +20,8 @@ class IntcodeComputer:
     self.phase = None
     if input_func != None:
       self.signal = input_func
+    else:
+      self.signal = None
     self.relative_base = 0
     self.stop_at_print = stop_at_print
     self.DEBUG_MODE = DEBUG
@@ -62,7 +64,7 @@ class IntcodeComputer:
   def exec_next_instr(self):
     opcode = self.instrs[self.PC]%100
     if self.DEBUG_MODE:
-      print (opcode)
+      print ('opcode', opcode)
     if opcode in self.three_opnds_instr_codes:
       param1, param2, dest = self.fetch_3_opnds()
       self.instrs[dest] = self.operations[opcode](param1, param2)
@@ -78,7 +80,10 @@ class IntcodeComputer:
       elif param_mode[0] == '2':
         self.instrs[self.relative_base+ self.instrs[self.PC+1]] = self.phase if self.phase != None else input_value
       if self.DEBUG_MODE:
-        print ('input', input_value)
+        if self.phase != None:
+          print ('input', 'self.phase', self.phase)
+        else:
+          print ('input', 'self.signal', input_value)
       self.phase = None
       self.PC += 2
 
